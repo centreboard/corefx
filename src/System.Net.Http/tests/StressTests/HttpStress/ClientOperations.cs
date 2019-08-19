@@ -179,6 +179,9 @@ namespace HttpStress
         // and the delegate to invoke for it, provided with the HttpClient instance on which to make the call and
         // returning asynchronously the retrieved response string from the server.  Individual operations can be
         // commented out from here to turn them off, or additional ones can be added.
+        private static string aString = new string('a', 1000);
+        private static byte[] aByteArray = Encoding.ASCII.GetBytes(new string('a', 1000));
+
         public static (string name, Func<RequestContext, Task> operation)[] Operations =>
             new (string, Func<RequestContext, Task>)[]
             {
@@ -378,6 +381,21 @@ namespace HttpStress
                         // Should not reach this block unless there's a bug in checksum validation logic. Do throw now
                         throw new Exception("server checksum mismatch");
                     }
+                }),
+
+                ("POST Duplex String",
+                async ctx =>
+                {
+                    using var req = new HttpRequestMessage(HttpMethod.Post, "/duplexSlowString") { Content = new ByteAtATimeNoLengthContent(aByteArray) };
+                    using HttpResponseMessage m = await ctx.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
+
+                    ValidateStatusCode(m);
+                    string response = await m.Content.ReadAsStringAsync();
+
+                    // trailing headers not supported for all servers, so do not require checksums
+
+                    ValidateContent(aString, response, details: $"strings do not match");
+
                 }),
 
                 ("POST Duplex Dispose",

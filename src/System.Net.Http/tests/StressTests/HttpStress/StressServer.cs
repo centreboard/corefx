@@ -227,6 +227,18 @@ namespace HttpStress
                     context.Response.AppendTrailer("crc32", hashAcc.ToString());
                 }
             });
+            endpoints.MapPost("/duplexSlowString", async context =>
+            {
+                var buffer = new byte[1];
+                while (((await context.Request.Body.ReadAsync(buffer)) != 0))
+                {
+                    if (buffer[0] != 'a')
+                    {
+                        throw new Exception("Bytes did not match");
+                    }
+                    await context.Response.Body.WriteAsync(buffer);
+                }
+            });
             endpoints.MapMethods("/", head, context =>
             {
                 // Just set the max content length on the response.
